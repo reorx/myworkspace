@@ -7,7 +7,7 @@ from operator import getitem
 from contextlib import contextmanager
 
 
-class options:
+class options:  # NOQA
     items_per_line = 3
     tab = 2
 
@@ -72,15 +72,44 @@ class NodeList(object):
     def __init__(self, *paths):
         nodes = {}
         for path in paths:
+            segments = path.split('/')
+            last_pos = len(segments) - 1
             last_item = nodes
-            for i in path.split('/'):
-                last_item.setdefault(i, [])
-        print nodes
+            for i, segment in enumerate(segments):
+                if i < last_pos:
+                    last_item = last_item.setdefault(segment, {})
+                else:
+                    last_item.setdefault(segment, [])
+        #print nodes
         self.nodes = nodes
 
     @staticmethod
     def _getitem_by_path(d, path):
-        return d
+        if not path:
+            return d
+        return reduce(lambda x, y: getitem(x, y), [d] + path.split('/'))
+
+    def __getitem__(self, key):
+        return self._getitem_by_path(self.nodes, key)
+
+    def __setitem__(self, key, value):
+        i = key.rfind('/')
+        a = key[:i]
+        b = key[i + 1:]
+        self[a][b] = value
+
+    def __delitem__(self, key):
+        pass
+
+    def len(self, path):
+        v = self[path]
+        if isinstance(v, dict):
+            length = 0
+            for k in v:
+                length += self.len(path + '/' + k)
+        else:
+            length = len(v)
+        return length
 
 
 def list_nodes():
@@ -143,16 +172,22 @@ def echo_nodes(nodes, indent=None, prefix='│ '):
 
 def main():
     echo('Scanning..\n')
-    nodes = {
-        'file': [],
-        'dir': {
-            'git': {
-                'pushed': [],
-                '_': []
-            },
-            '_': []
-        }
-    }
+    nodes = NodeList(
+        'file',
+        'dir/_',
+        'dir/git/_',
+        'dir/git/pushed',
+    )
+    #nodes = {
+    #    'file': [],
+    #    'dir': {
+    #        'git': {
+    #            'pushed': [],
+    #            '_': []
+    #        },
+    #        '_': []
+    #    }
+    #}
 
     for node in list_nodes():
         if node.type == 'dir':
@@ -160,38 +195,43 @@ def main():
 
             if node.is_git:
                 if node.pushed:
-                    nodes['dir']['git']['pushed'].append(node)
+                    nodes['dir/git/pushed'].append(node)
+                    #nodes['dir']['git']['pushed'].append(node)
                 else:
-                    nodes['dir']['git']['_'].append(node)
+                    nodes['dir/git/_'].append(node)
+                    #nodes['dir']['git']['_'].append(node)
             else:
-                nodes['dir']['_'].append(node)
+                nodes['dir/_'].append(node)
+                #nodes['dir']['_'].append(node)
         else:
             nodes['file'].append(node)
 
     # Show them all
     tab = options.tab
 
-    current = nodes['file']
-    echo('Files (%s):' % len(current))
-    echo_nodes(current, tab)
+    k = 'file'
+    echo('Files (%s):' % nodes.len(k))
+    echo_nodes(nodes[k], tab)
     echo('')
 
     #
-    echo('Directories:')
+    echo('Directories (%s):' % nodes.len('dir'))
     # #
-    echo('Git:', tab)
+    echo('Git (%s):' % nodes.len('dir/git'), tab)
     # ##
-    current = nodes['dir']['git']['pushed']
-    echo('Pushed (%s):', tab * 2)
-    echo_nodes(current, tab * 2)
+    k = 'dir/git/pushed'
+    echo('Pushed (%s):' % nodes.len(k), tab * 2)
+    echo_nodes(nodes[k], tab * 2)
     echo('')
     # ##
-    echo('Not pushed', tab * 2)
-    echo_nodes(nodes['dir']['git']['_'], tab * 2)
+    k = 'dir/git/_'
+    echo('Not pushed (%s):' % nodes.len(k), tab * 2)
+    echo_nodes(nodes[k], tab * 2)
     echo('')
     # #
-    echo('Normal:', tab)
-    echo_nodes(nodes['dir']['_'], tab)
+    k = 'dir/_'
+    echo('Normal (%s):' % nodes.len(k), tab)
+    echo_nodes(nodes[k], tab)
 
 
 if __name__ == '__main__':
