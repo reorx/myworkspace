@@ -3,6 +3,7 @@
 
 import sh
 import os
+import functools
 from operator import getitem
 from contextlib import contextmanager
 
@@ -30,8 +31,6 @@ def cdctx(path):
 
 class Node(object):
     def __init__(self, name):
-        if isinstance(name, unicode):
-            name = name.encode('utf8')
         self.name = name
         self.type = get_node_type(name)
         self.is_git = None
@@ -80,14 +79,14 @@ class NodeList(object):
                     last_item = last_item.setdefault(segment, {})
                 else:
                     last_item.setdefault(segment, [])
-        #print nodes
+        #print(nodes)
         self.nodes = nodes
 
     @staticmethod
     def _getitem_by_path(d, path):
         if not path:
             return d
-        return reduce(lambda x, y: getitem(x, y), [d] + path.split('/'))
+        return functools.reduce(lambda x, y: getitem(x, y), [d] + path.split('/'))
 
     def __getitem__(self, key):
         return self._getitem_by_path(self.nodes, key)
@@ -124,14 +123,12 @@ def echo(s, indent=None, prefix=None):
     if indent:
         s = ' ' * indent + s
 
-    if isinstance(s, unicode):
-        s = s.encode('utf8')
-    print s
+    print(s)
 
 
 def echo_nodes(nodes, indent=None, prefix='│ '):
     lines = []
-    col_max_widths = [0 for x in xrange(options.items_per_line)]
+    col_max_widths = [0 for x in range(options.items_per_line)]
     line_buf = []
 
     for i, node in enumerate(nodes):
