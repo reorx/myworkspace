@@ -19,14 +19,16 @@ def get_node_type(name):
     elif os.path.isfile(name):
         return 'file'
     else:
-        raise TypeError('WTF is this %s' % name)
+        path = os.path.abspath(name)
+        raise TypeError('WTF is this: {}, {}'.format(path, os.stat(path)))
 
 
 @contextmanager
 def cdctx(path):
+    old_cwd = os.getcwd()
     os.chdir(path)
     yield
-    os.chdir('..')
+    os.chdir(old_cwd)
 
 
 class Node(object):
@@ -168,6 +170,7 @@ def echo_nodes(nodes, indent=None, prefix='│ '):
 
 
 def main():
+    echo('cwd: {}'.format(os.getcwd()))
     echo('Scanning..\n')
     nodes = NodeList(
         'file',
