@@ -20,7 +20,7 @@ def get_node_type(name):
         return 'file'
     else:
         path = os.path.abspath(name)
-        raise TypeError('WTF is this: {}, {}'.format(path, os.stat(path)))
+        raise TypeError('WTF is this: {}, {}'.format(name, os.stat(path)))
 
 
 @contextmanager
@@ -114,8 +114,10 @@ class NodeList(object):
 
 
 def list_nodes():
-    for i in sh.ls('-1'):
+    for i in sh.ls('-1').split('\n'):
         name = i.strip()
+        if not name:
+            continue
         yield Node(name)
 
 
